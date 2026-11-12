@@ -38,17 +38,17 @@ data class UiStrings(
     val fileNameLabel: String,
     val saveLocalBtn: String,
     val directShareBtn: String,
-    // 补齐 MainScreen 和 PDF 导出中调用的字段
+    // 补齐 MainScreen 调用的字段
     val targetDryCoatLabel: String,
     val coatingLayersLabel: String,
     val filmLengthLabel: String,
     val filmWidthLabel: String,
-    val workingSolutionSolid: String,
+    val summaryOutputHeader: String,
+    val workingSolutionSolidLevel: String,
     val totalWetWeightLabel: String,
     val totalCostPerSqmLabel: String,
     val processingAreaLabel: String,
-    val totalRollCostLabel: String,
-    val totalCostPerSqm: String // 兼容部分调用
+    val totalRollCostLabel: String
 )
 
 object LocalizationManager {
@@ -86,7 +86,7 @@ object LocalizationManager {
         defaultAdditive = "助剂",
         defaultSolvent = "纯溶剂",
         exportDialogTitle = "导出与分享配方 PDF",
-        exportDialogDesc = "将当前配方参数、加工成本及配胶结果导出为表格 PDF（页脚自动附带最后计算时间）。",
+        exportDialogDesc = "将当前配方参数、加工成本及配胶结果导出为表格 PDF。",
         fileNameLabel = "文件名（可修改）",
         saveLocalBtn = "保存本地",
         directShareBtn = "直接分享",
@@ -94,12 +94,12 @@ object LocalizationManager {
         coatingLayersLabel = "涂布层数",
         filmLengthLabel = "薄膜长度 (m)",
         filmWidthLabel = "薄膜宽度 (m)",
-        workingSolutionSolid = "工作液固含量",
+        summaryOutputHeader = "3. 计算结果与成本汇总",
+        workingSolutionSolidLevel = "工作液固含量",
         totalWetWeightLabel = "每平米总湿重",
         totalCostPerSqmLabel = "每平米总成本",
         processingAreaLabel = "加工面积",
-        totalRollCostLabel = "整卷总成本",
-        totalCostPerSqm = "每平米成本"
+        totalRollCostLabel = "整卷总成本"
     )
 
     private val ZhTwStrings = UiStrings(
@@ -129,7 +129,7 @@ object LocalizationManager {
         defaultAdditive = "助劑",
         defaultSolvent = "純溶劑",
         exportDialogTitle = "匯出與分享配方 PDF",
-        exportDialogDesc = "將當前配方參數、加工成本及配膠結果匯出為表格 PDF（頁尾自動附帶最後計算時間）。",
+        exportDialogDesc = "將當前配方參數、加工成本及配膠結果匯出為表格 PDF。",
         fileNameLabel = "檔案名稱（可修改）",
         saveLocalBtn = "儲存本地",
         directShareBtn = "直接分享",
@@ -137,12 +137,12 @@ object LocalizationManager {
         coatingLayersLabel = "塗布層數",
         filmLengthLabel = "薄膜長度 (m)",
         filmWidthLabel = "薄膜寬度 (m)",
-        workingSolutionSolid = "工作液固含量",
+        summaryOutputHeader = "3. 計算結果與成本匯總",
+        workingSolutionSolidLevel = "工作液固含量",
         totalWetWeightLabel = "每平米總濕重",
         totalCostPerSqmLabel = "每平米總成本",
         processingAreaLabel = "加工面積",
-        totalRollCostLabel = "整卷總成本",
-        totalCostPerSqm = "每平米成本"
+        totalRollCostLabel = "整卷總成本"
     )
 
     private val EnStrings = UiStrings(
@@ -180,12 +180,12 @@ object LocalizationManager {
         coatingLayersLabel = "Coating Layers",
         filmLengthLabel = "Film Length (m)",
         filmWidthLabel = "Film Width (m)",
-        workingSolutionSolid = "Solution Solid Content",
+        summaryOutputHeader = "3. Summary & Cost",
+        workingSolutionSolidLevel = "Solution Solid Content",
         totalWetWeightLabel = "Total Wet Weight / sqm",
         totalCostPerSqmLabel = "Total Cost / sqm",
         processingAreaLabel = "Processing Area",
-        totalRollCostLabel = "Total Roll Cost",
-        totalCostPerSqm = "Cost / sqm"
+        totalRollCostLabel = "Total Roll Cost"
     )
 
     private val JaStrings = UiStrings(
@@ -223,11 +223,11 @@ object LocalizationManager {
         coatingLayersLabel = "塗布層数",
         filmLengthLabel = "フィルム長さ (m)",
         filmWidthLabel = "フィルム幅 (m)",
-        workingSolutionSolid = "作業液固形分",
+        summaryOutputHeader = "3. 計算結果・コスト",
+        workingSolutionSolidLevel = "作業液固形分",
         totalWetWeightLabel = "総湿潤重量 / m²",
         totalCostPerSqmLabel = "総コスト / m²",
         processingAreaLabel = "加工面積",
-        totalRollCostLabel = "ロール総コスト",
-        totalCostPerSqm = "m²当たりコスト"
+        totalRollCostLabel = "ロール総コスト"
     )
 }
