@@ -9,7 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.coating.calculator.ui.CalculatorViewModel
-import com.coating.calculator.ui.MainScreen // 确保引用的是 MainScreen
+import com.coating.calculator.ui.MainScreen
 import com.coating.calculator.ui.theme.CoatingCalculatorTheme
 
 class MainActivity : ComponentActivity() {
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(viewModel = viewModel) // 使用 MainScreen
+                    MainScreen(viewModel = viewModel)
                 }
             }
         }
