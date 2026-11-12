@@ -25,13 +25,16 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
+    # 新增：赋予 gradlew 运行权限
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    # 核心步骤：自动创建 GitHub Release 并将 APK 上传为永久附件
     - name: Upload APK to Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/v') # 仅在推送 v* 标签时执行发布
+      if: startsWith(github.ref, 'refs/tags/v')
       with:
         files: app/build/outputs/apk/debug/app-debug.apk
         name: "App Release ${{ github.ref_name }}"
