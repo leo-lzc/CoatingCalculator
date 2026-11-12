@@ -9,10 +9,10 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import com.coating.calculator.ui.CalculatorViewModel
 import com.coating.calculator.ui.i18n.LocalizationManager
-import com.coating.calculator.util.DisplayFormatter // 确保这里的包名与你实际创建的 DisplayFormatter.kt 路径一致
 import java.io.File
 import java.io.FileOutputStream
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 object PdfExportAndShareHelper {
 
@@ -83,9 +83,9 @@ object PdfExportAndShareHelper {
             val row = listOf(
                 "#${c.slotIndex}",
                 c.name.ifBlank { "组分${c.slotIndex}" },
-                DisplayFormatter.formatRatio(engineComp.ratio),
-                DisplayFormatter.formatSolidPercent(engineComp.effectiveSolidContent),
-                DisplayFormatter.formatCostInteger(engineComp.unitPrice ?: BigDecimal.ZERO),
+                formatRatio(engineComp.ratio),
+                formatSolidPercent(engineComp.effectiveSolidContent),
+                formatCostInteger(engineComp.unitPrice ?: BigDecimal.ZERO),
                 if (c.isAdjustableSolvent) "是" else "否"
             )
             currentY = drawTableRow(canvas, margin, currentY, colWidths1, row, false, headerBgPaint, borderPaint, cellTextPaint)
@@ -96,10 +96,10 @@ object PdfExportAndShareHelper {
         currentY += 8f
 
         val summaryRows = listOf(
-            listOf("目标干涂布量", "${viewModel.coatingDryWeightText.ifBlank { "--" }} g/m²", "工作液浓度", DisplayFormatter.formatSolidPercent(projectResult.workingSolutionSolid)),
+            listOf("目标干涂布量", "${viewModel.coatingDryWeightText.ifBlank { "--" }} g/m²", "工作液浓度", formatSolidPercent(projectResult.workingSolutionSolid)),
             listOf("薄膜规格 (长×宽)", "${viewModel.filmLengthText.ifBlank { "--" }}m × ${viewModel.filmWidthText.ifBlank { "--" }}m", "${viewModel.coatingLayersText.ifBlank { "--" }}层", ""),
-            listOf("每平米总湿重", "${DisplayFormatter.formatWeightOrArea(projectResult.totalWetWeightPerSqm)} g/m²", "每平米总成本", "${DisplayFormatter.formatCostInteger(projectResult.totalCostPerSqm)} 元"),
-            listOf("计算状态", projectResult.status.name, "整卷总成本", "${DisplayFormatter.formatCostInteger(projectResult.totalRollCost)} 元")
+            listOf("每平米总湿重", "${formatWeightOrArea(projectResult.totalWetWeightPerSqm)} g/m²", "每平米总成本", "${formatCostInteger(projectResult.totalCostPerSqm)} 元"),
+            listOf("计算状态", projectResult.status.name, "整卷总成本", "${formatCostInteger(projectResult.totalRollCost)} 元")
         )
         val colWidthsSummary = floatArrayOf(120f, 141.5f, 120f, 141.5f)
 
@@ -156,5 +156,24 @@ object PdfExportAndShareHelper {
         val chooser = Intent.createChooser(intent, "分享计算报告 PDF")
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
+    }
+
+    // 内联格式化辅助函数，彻底避免外部引用报错
+    private fun formatRatio(value: BigDecimal?): String {
+        return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
+    }
+
+    private fun formatSolidPercent(value: BigDecimal?): String {
+        if (value == null) return "0%"
+        val percent = value.multiply(BigDecimal("100")).setScale(1, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        return "$percent%"
+    }
+
+    private fun formatCostInteger(value: BigDecimal?): String {
+        return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
+    }
+
+    private fun formatWeightOrArea(value: BigDecimal?): String {
+        return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
     }
 }
