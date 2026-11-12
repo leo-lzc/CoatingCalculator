@@ -2,11 +2,8 @@ name: Build and Release APK
 
 on:
   push:
-    # 方式一：当你推送以 v 开头的标签时自动触发发布（例如 v1.0.0）
     tags:
       - 'v*'
-    # 方式二：如果你希望每次推送到 main 分支也自动发布，可以取消下面两行的注释
-    # branches: [ "main", "master" ]
 
 jobs:
   build:
@@ -25,7 +22,10 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    # 新增：赋予 gradlew 运行权限
+    # 核心：在云端自动生成缺失的 gradlew 文件
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
