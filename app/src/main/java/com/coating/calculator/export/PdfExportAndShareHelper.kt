@@ -84,7 +84,7 @@ object PdfExportAndShareHelper {
                 "#${c.slotIndex}",
                 c.name.ifBlank { "组分${c.slotIndex}" },
                 formatRatio(engineComp.ratio),
-                formatSolidPercent(engineComp.effectiveSolidContent),
+                formatSolidPercent(engineComp.solidContent),
                 formatCostInteger(engineComp.unitPrice ?: BigDecimal.ZERO),
                 if (c.isAdjustableSolvent) "是" else "否"
             )
@@ -158,7 +158,6 @@ object PdfExportAndShareHelper {
         context.startActivity(chooser)
     }
 
-    // 内联格式化辅助函数，彻底避免外部引用报错
     private fun formatRatio(value: BigDecimal?): String {
         return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
     }
