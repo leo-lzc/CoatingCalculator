@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.Material3.DayNight.NoActionBar" parent="Theme.Material3.Light.NoActionBar">
-        <!-- 基础样式 -->
+    <style name="Theme.Material3.DayNight.NoActionBar" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 使用 Android 系统原生主题，零外部依赖 -->
     </style>
 </resources>
