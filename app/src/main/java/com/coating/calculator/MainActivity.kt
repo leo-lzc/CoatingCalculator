@@ -7,22 +7,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.coating.calculator.ui.CalculatorViewModel
 import com.coating.calculator.ui.CoatingCalculatorScreen
 
 class MainActivity : ComponentActivity() {
+    private val viewModel = CalculatorViewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val viewModel: CalculatorViewModel = viewModel()
-                    CoatingCalculatorScreen(viewModel = viewModel)
-                }
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                CoatingCalculatorScreen(viewModel = viewModel)
             }
         }
     }
