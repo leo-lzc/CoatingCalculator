@@ -9,7 +9,7 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import com.coating.calculator.ui.CalculatorViewModel
 import com.coating.calculator.ui.i18n.LocalizationManager
-import com.coating.calculator.util.DisplayFormatter
+import com.coating.calculator.util.DisplayFormatter // 确保这里的包名与你实际创建的 DisplayFormatter.kt 路径一致
 import java.io.File
 import java.io.FileOutputStream
 import java.math.BigDecimal
