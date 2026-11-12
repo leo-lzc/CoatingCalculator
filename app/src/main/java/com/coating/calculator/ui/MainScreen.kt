@@ -3,7 +3,6 @@ package com.coating.calculator.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,13 +15,22 @@ import com.coating.calculator.ui.i18n.LocalizationManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CoatingCalculatorScreen(viewModel: CalculatorViewModel) {
+fun MainScreen(viewModel: CalculatorViewModel) {
     val strings = LocalizationManager.getStrings(viewModel.currentLanguage)
     var showExportDialog by remember { mutableStateOf(false) }
 
     val yellowBg = Color(0xFFFFF9C4) // 输入项暖黄色
     val blueBg = Color(0xFFE1F5FE)   // 只读输出项浅蓝色
     val projectResult = viewModel.getProjectCostResult()
+    val formattedDetails = viewModel.getFormattedComponentDetails()
+
+    // 动态计算反算结果
+    val experimentalMixingList = remember(viewModel.expMainAgentText, viewModel.components) {
+        viewModel.calculateExperimentalMixing()
+    }
+    val targetTotalMixingList = remember(viewModel.targetTotalMassText, viewModel.components) {
+        viewModel.calculateTargetTotalMixing()
+    }
 
     Scaffold(
         topBar = {
@@ -87,14 +95,14 @@ fun CoatingCalculatorScreen(viewModel: CalculatorViewModel) {
                             OutlinedTextField(
                                 value = viewModel.coatingDryWeightText,
                                 onValueChange = { viewModel.coatingDryWeightText = it },
-                                label = { Text(strings.targetDryCoatLabel) },
+                                label = { Text(strings.targetDryCoatLabel, fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f).background(yellowBg),
                                 singleLine = true
                             )
                             OutlinedTextField(
                                 value = viewModel.coatingLayersText,
                                 onValueChange = { viewModel.coatingLayersText = it },
-                                label = { Text(strings.coatingLayersLabel) },
+                                label = { Text(strings.coatingLayersLabel, fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f).background(yellowBg),
                                 singleLine = true
                             )
@@ -104,14 +112,14 @@ fun CoatingCalculatorScreen(viewModel: CalculatorViewModel) {
                             OutlinedTextField(
                                 value = viewModel.filmLengthText,
                                 onValueChange = { viewModel.filmLengthText = it },
-                                label = { Text(strings.filmLengthLabel) },
+                                label = { Text(strings.filmLengthLabel, fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f).background(yellowBg),
                                 singleLine = true
                             )
                             OutlinedTextField(
                                 value = viewModel.filmWidthText,
                                 onValueChange = { viewModel.filmWidthText = it },
-                                label = { Text(strings.filmWidthLabel) },
+                                label = { Text(strings.filmWidthLabel, fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f).background(yellowBg),
                                 singleLine = true
                             )
@@ -120,7 +128,59 @@ fun CoatingCalculatorScreen(viewModel: CalculatorViewModel) {
                 }
             }
 
-            // 模块 3：计算结果汇总（浅蓝色只读区域）
+            // 模块 3：配胶与反算功能专区 (1.1 实验配胶 & 1.2 配胶计算)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("2. 配胶计算与反算专区", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF4A148C))
+
+                        // 1.1 实验配胶
+                        OutlinedTextField(
+                            value = viewModel.expMainAgentText,
+                            onValueChange = { viewModel.expMainAgentText = it },
+                            label = { Text("实验配胶：输入主剂添加量 (g)", fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth().background(yellowBg),
+                            singleLine = true
+                        )
+                        if (experimentalMixingList.isNotEmpty()) {
+                            Surface(color = Color.White, modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(6.dp)) {
+                                    Text("实验配胶结果（工作液总量与各组分，保留1位小数）：", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6A1B9A))
+                                    experimentalMixingList.forEach { (name, amount) ->
+                                        Text("• $name: $amount g", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // 1.2 配胶计算
+                        OutlinedTextField(
+                            value = viewModel.targetTotalMassText,
+                            onValueChange = { viewModel.targetTotalMassText = it },
+                            label = { Text("配胶计算：输入工作液目标总量 (g)", fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth().background(yellowBg),
+                            singleLine = true
+                        )
+                        if (targetTotalMixingList.isNotEmpty()) {
+                            Surface(color = Color.White, modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(6.dp)) {
+                                    Text("目标总量称取明细（保留1位小数）：", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6A1B9A))
+                                    targetTotalMixingList.forEach { (name, amount) ->
+                                        Text("• $name: $amount g", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 模块 4：计算结果与成本汇总（浅蓝色只读区域，含明细）
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -133,6 +193,38 @@ fun CoatingCalculatorScreen(viewModel: CalculatorViewModel) {
                         Text("${strings.totalCostPerSqmLabel}: ${projectResult.totalCostPerSqm} 元/m²")
                         Text("${strings.processingAreaLabel}: ${projectResult.processingAreaSqm} m²")
                         Text("${strings.totalRollCostLabel}: ${projectResult.totalRollCost} 元")
+
+                        Divider(color = Color(0xFFB0BEC5), thickness = 1.dp, modifier = Modifier.padding(vertical = 4.dp))
+                        Text("各组分明细汇总（湿重保留1位小数，成本保留2位小数）：", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF01579B))
+
+                        if (formattedDetails.isEmpty()) {
+                            Text("暂无有效组分数据", fontSize = 11.sp, color = Color.Gray)
+                        } else {
+                            formattedDetails.forEach { detail ->
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(6.dp)) {
+                                        Text("#${detail.slotIndex} ${detail.name}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("每平米湿重: ${detail.wetWeightPerSqmText} g/m²", fontSize = 11.sp)
+                                            Text("每平米成本: ${detail.costPerSqmText} 元", fontSize = 11.sp)
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("项目总重量: ${detail.totalWeightKgText} kg", fontSize = 11.sp)
+                                            Text("项目总成本: ${detail.totalCostText} 元", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -184,21 +276,21 @@ fun ComponentRow(
                 OutlinedTextField(
                     value = component.name,
                     onValueChange = { onUpdate(component.copy(name = it)) },
-                    label = { Text("组分名称") },
-                    modifier = Modifier.weight(1.2f).background(yellowBg),
+                    label = { Text("组分名称", fontSize = 11.sp) },
+                    modifier = Modifier.weight(1.1f).background(yellowBg),
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = component.ratioText,
                     onValueChange = { onUpdate(component.copy(ratioText = it)) },
-                    label = { Text("质量比") },
+                    label = { Text("质量比", fontSize = 11.sp) },
                     modifier = Modifier.weight(0.9f).background(yellowBg),
                     singleLine = true
                 )
                 OutlinedTextField(
-                    value = if (component.isAdjustableSolvent) "0%" else component.solidText,
+                    value = if (component.isAdjustableSolvent) "0" else component.solidText,
                     onValueChange = { if (!component.isAdjustableSolvent) onUpdate(component.copy(solidText = it)) },
-                    label = { Text("固含量%") },
+                    label = { Text("固含量%", fontSize = 11.sp) },
                     modifier = Modifier.weight(0.9f).background(if (component.isAdjustableSolvent) Color(0xFFE0E0E0) else yellowBg),
                     enabled = !component.isAdjustableSolvent,
                     singleLine = true
@@ -206,7 +298,7 @@ fun ComponentRow(
                 OutlinedTextField(
                     value = component.unitPriceText,
                     onValueChange = { onUpdate(component.copy(unitPriceText = it)) },
-                    label = { Text("单价/kg") },
+                    label = { Text("单价/kg", fontSize = 11.sp) },
                     modifier = Modifier.weight(0.9f).background(yellowBg),
                     singleLine = true
                 )
