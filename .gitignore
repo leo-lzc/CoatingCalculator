@@ -1,0 +1,11 @@
+# Android / Gradle 临时文件
+.gradle/
+/build/
+**/build/
+.idea/
+*.iml
+local.properties
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
