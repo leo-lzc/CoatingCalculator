@@ -1,10 +1,12 @@
-name: Build Android APK
+name: Build and Release APK
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    # 方式一：当你推送以 v 开头的标签时自动触发发布（例如 v1.0.0）
+    tags:
+      - 'v*'
+    # 方式二：如果你希望每次推送到 main 分支也自动发布，可以取消下面两行的注释
+    # branches: [ "main", "master" ]
 
 jobs:
   build:
@@ -26,8 +28,15 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
+    # 核心步骤：自动创建 GitHub Release 并将 APK 上传为永久附件
+    - name: Upload APK to Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v') # 仅在推送 v* 标签时执行发布
       with:
-        name: app-debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+        files: app/build/outputs/apk/debug/app-debug.apk
+        name: "App Release ${{ github.ref_name }}"
+        body: "自动编译发布的薄膜涂布计算器安装包。"
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
