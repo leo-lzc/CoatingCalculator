@@ -22,27 +22,21 @@ object PdfExportAndShareHelper {
         val components = viewModel.components
 
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 Size: 595 x 842
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
         val page = pdfDocument.startPage(pageInfo)
         val canvas: Canvas = page.canvas
-
-        val paint = Paint().apply {
-            color = Color.BLACK
-            textSize = 12f
-            isAntiAlias = true
-        }
 
         val titlePaint = Paint().apply {
             color = Color.BLACK
             textSize = 18f
-            isBoldText = true
+            isFakeBoldText = true
             isAntiAlias = true
         }
 
         val sectionPaint = Paint().apply {
             color = Color.DKGRAY
             textSize = 14f
-            isBoldText = true
+            isFakeBoldText = true
             isAntiAlias = true
         }
 
@@ -66,13 +60,7 @@ object PdfExportAndShareHelper {
         val cellBoldPaint = Paint().apply {
             color = Color.BLACK
             textSize = 10f
-            isBoldText = true
-            isAntiAlias = true
-        }
-
-        val footerPaint = Paint().apply {
-            color = Color.DKGRAY
-            textSize = 9f
+            isFakeBoldText = true
             isAntiAlias = true
         }
 
