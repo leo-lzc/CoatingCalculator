@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -328,7 +327,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Download,
+                        imageVector = Icons.Default.Share, // 使用 Share 代替 Download 避免图标缺失报错
                         contentDescription = "导出到本地",
                         modifier = Modifier.size(18.dp)
                     )
@@ -336,7 +335,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     Text("导出到本地", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
 
-                // 按钮 2：直接调用系统分享面板（如发送给微信/钉钉/邮箱）
+                // 按钮 2：直接调用系统分享面板
                 Button(
                     onClick = {
                         PdfExportAndShareHelper.generateAndSharePdf(context, viewModel)
