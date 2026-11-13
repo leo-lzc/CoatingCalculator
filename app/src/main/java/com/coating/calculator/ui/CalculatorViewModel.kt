@@ -26,17 +26,15 @@ data class ComponentUiState(
     )
 }
 
-// 格式化后的各项明细数据结构（严格控制小数位数）
 data class FormattedComponentDetail(
     val slotIndex: Int,
     val name: String,
     val wetWeightPerSqmText: String, // g/m² 保留1位小数
     val costPerSqmText: String,      // 元/m² 保留2位小数
-    val totalWeightKgText: String,   // kg 保留1位小数
+    val totalWeightKgText: String,   // kg 保留2位小数
     val totalCostText: String        // 元 保留2位小数
 )
 
-// 格式化后的项目汇总数据结构（重量1位，成本2位）
 data class FormattedProjectResult(
     val workingSolutionSolid: String,
     val totalWetWeightPerSqm: String,
@@ -53,11 +51,10 @@ class CalculatorViewModel : ViewModel() {
         currentLanguage = lang
     }
 
-    // 最多 5 个槽位初始化
     val components = mutableStateListOf(
         ComponentUiState(1, true, "主剂", "100", "30", "95", false),
         ComponentUiState(2, true, "固化剂", "10", "50", "60", false),
-        ComponentUiState(3, true, "纯溶剂", "50", "0", "8", true), // 默认勾选可调溶剂
+        ComponentUiState(3, true, "纯溶剂", "50", "0", "8", true),
         ComponentUiState(4, false, "", "", "0", "", false),
         ComponentUiState(5, false, "", "", "0", "", false)
     )
@@ -68,9 +65,10 @@ class CalculatorViewModel : ViewModel() {
     var coatingLayersText by mutableStateOf("1")
     var batchUnitText by mutableStateOf("kg")
 
-    // 1.1 & 1.2 实验配胶与配胶计算输入状态
-    var expMainAgentText by mutableStateOf("")     // 实验配胶：输入主剂添加量
-    var targetTotalMassText by mutableStateOf("")  // 配胶计算：输入工作液目标总量
+    // 1.1 实验配胶 & 1.2 配胶计算 & 1.3 工作液浓度反算溶剂
+    var expMainAgentText by mutableStateOf("")
+    var targetTotalMassText by mutableStateOf("")
+    var targetSolidContentText by mutableStateOf("") // 新增：目标工作液固含量反算（%）
 
     fun updateComponent(index: Int, updated: ComponentUiState) {
         if (index in components.indices) {
@@ -87,9 +85,6 @@ class CalculatorViewModel : ViewModel() {
         return CoatingCalculatorEngine.calculateProjectCost(inputs, d, l, w, n)
     }
 
-    /**
-     * 获取格式化后的项目汇总数据（固含量保留百分比整数，湿重/面积保留1位小数，成本保留2位小数）
-     */
     fun getProjectCostResult(): FormattedProjectResult {
         val raw = getRawProjectResult()
         
@@ -108,9 +103,6 @@ class CalculatorViewModel : ViewModel() {
         )
     }
 
-    /**
-     * 获取各组分明细数据（每平米湿重/总重量保留1位小数，每平米成本/总成本保留2位小数）
-     */
     fun getFormattedComponentDetails(): List<FormattedComponentDetail> {
         val raw = getRawProjectResult()
         val inputs = components.filter { it.enabled }
@@ -122,7 +114,7 @@ class CalculatorViewModel : ViewModel() {
         val l = filmLengthText.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val w = filmWidthText.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val n = coatingLayersText.toBigDecimalOrNull() ?: BigDecimal.ONE
-        val area = l.multiply(w).multiply(n) // 总加工面积 m²
+        val area = l.multiply(w).multiply(n)
 
         val totalRatio = inputs.sumOf { it.toEngineInput().ratio }
         val totalWetSqm = if (raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) > 0) {
@@ -139,21 +131,17 @@ class CalculatorViewModel : ViewModel() {
                 BigDecimal.ZERO
             }
 
-            // 每平米湿重 (g/m²) -> 严格保留 1 位小数
             val wetSqm = totalWetSqm.multiply(ratioFraction).setScale(1, RoundingMode.HALF_UP)
-            
-            // 每平米成本 (元/m²) = (湿重g/m² / 1000) * 单价元/kg -> 严格保留 2 位小数
             val unitPrice = engineInput.unitPrice ?: BigDecimal.ZERO
             val costSqm = wetSqm.divide(BigDecimal("1000"), 6, RoundingMode.HALF_UP)
                 .multiply(unitPrice)
                 .setScale(2, RoundingMode.HALF_UP)
 
-            // 整个项目组分总重量 (kg) = (湿重g/m² * 面积m²) / 1000 -> 严格保留 1 位小数
+            // kg 单位严格保留 2 位小数
             val totalWeightKg = wetSqm.multiply(area)
                 .divide(BigDecimal("1000"), 6, RoundingMode.HALF_UP)
-                .setScale(1, RoundingMode.HALF_UP)
+                .setScale(2, RoundingMode.HALF_UP)
 
-            // 整个项目组分总成本 (元) = 总重量kg * 单价元/kg -> 严格保留 2 位小数
             val totalCost = totalWeightKg.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP)
 
             FormattedComponentDetail(
@@ -167,9 +155,6 @@ class CalculatorViewModel : ViewModel() {
         }
     }
 
-    /**
-     * 1.1 实验配胶：输入主剂添加量，计算其他组分添加量（结果保留 1 位小数）
-     */
     fun calculateExperimentalMixing(): List<Pair<String, String>> {
         val mainAmount = expMainAgentText.toBigDecimalOrNull() ?: return emptyList()
         val inputs = components.filter { it.enabled }
@@ -182,14 +167,11 @@ class CalculatorViewModel : ViewModel() {
         val scaleFactor = mainAmount.divide(mainRatio, 6, RoundingMode.HALF_UP)
         return inputs.map { comp ->
             val ratio = comp.toEngineInput().ratio
-            val amount = ratio.multiply(scaleFactor).setScale(1, RoundingMode.HALF_UP)
+            val amount = ratio.multiply(scaleFactor).setScale(2, RoundingMode.HALF_UP) // kg/g显示2位
             Pair(comp.name.ifBlank { "组分${comp.slotIndex}" }, amount.toPlainString())
         }
     }
 
-    /**
-     * 1.2 配胶计算：输入工作液目标总量，计算各组分添加量（结果保留 1 位小数）
-     */
     fun calculateTargetTotalMixing(): List<Pair<String, String>> {
         val targetTotal = targetTotalMassText.toBigDecimalOrNull() ?: return emptyList()
         val inputs = components.filter { it.enabled }
@@ -201,8 +183,49 @@ class CalculatorViewModel : ViewModel() {
         val scaleFactor = targetTotal.divide(totalRatio, 6, RoundingMode.HALF_UP)
         return inputs.map { comp ->
             val ratio = comp.toEngineInput().ratio
-            val amount = ratio.multiply(scaleFactor).setScale(1, RoundingMode.HALF_UP)
+            val amount = ratio.multiply(scaleFactor).setScale(2, RoundingMode.HALF_UP)
             Pair(comp.name.ifBlank { "组分${comp.slotIndex}" }, amount.toPlainString())
         }
+    }
+
+    /**
+     * 根据目标工作液固含量反算可调溶剂的配比及调整方案
+     */
+    fun calculateSolventAdjustmentByTargetSolid(): String {
+        val targetSolidPercent = targetSolidContentText.toBigDecimalOrNull() ?: return ""
+        val targetSolid = targetSolidPercent.divide(BigDecimal("100"), 6, RoundingMode.HALF_UP)
+        if (targetSolid.compareTo(BigDecimal.ZERO) <= 0 || targetSolid.compareTo(BigDecimal.ONE) >= 0) {
+            return "请输入有效的固含量百分比 (0~100)"
+        }
+
+        // 找到勾选了“可调溶剂”的组分
+        val solventComp = components.firstOrNull { it.enabled && it.isAdjustableSolvent }
+            ?: return "请先在下方勾选一个组分作为“可调溶剂”"
+
+        // 计算非溶剂组分的总固体质量或基准量
+        val nonSolventComps = components.filter { it.enabled && !it.isAdjustableSolvent }
+        if (nonSolventComps.isEmpty()) return "没有找到基础配方组分"
+
+        // 计算非溶剂组分的总配比质量
+        val nonSolventRatioSum = nonSolventComps.sumOf { it.ratioText.toBigDecimalOrNull() ?: BigDecimal.ZERO }
+        // 计算非溶剂组分携带的干固分总量折算基数 (Ratio * SolidContent)
+        val totalSolidMassBase = nonSolventComps.sumOf { c ->
+            val r = c.ratioText.toBigDecimalOrNull() ?: BigDecimal.ZERO
+            val s = (c.solidText.toBigDecimalOrNull() ?: BigDecimal.ZERO).divide(BigDecimal("100"), 6, RoundingMode.HALF_UP)
+            r.multiply(s)
+        }
+
+        if (totalSolidMassBase.compareTo(BigDecimal.ZERO) == 0) return "基础固分质量为0，无法反算"
+
+        // 公式：目标总配比 = 总固分质量基数 / 目标固含量
+        val requiredTotalRatio = totalSolidMassBase.divide(targetSolid, 6, RoundingMode.HALF_UP)
+        // 所需的可调溶剂配比 = 目标总配比 - 非溶剂组分总配比
+        val requiredSolventRatio = requiredTotalRatio.subtract(nonSolventRatioSum).setScale(2, RoundingMode.HALF_UP)
+
+        if (requiredSolventRatio.compareTo(BigDecimal.ZERO) < 0) {
+            return "目标固含量过高，现有主剂固含已超过该数值，无法通过增加溶剂实现"
+        }
+
+        return "反算建议：【${solventComp.name.ifBlank { "组分${solventComp.slotIndex}" }}】配比应调整为 ${requiredSolventRatio.toPlainString()}"
     }
 }

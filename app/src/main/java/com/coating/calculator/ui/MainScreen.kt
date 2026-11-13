@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,8 +34,8 @@ fun MainScreen(viewModel: CalculatorViewModel) {
     val componentDetails = viewModel.getFormattedComponentDetails()
     val expMixingResults = viewModel.calculateExperimentalMixing()
     val targetMixingResults = viewModel.calculateTargetTotalMixing()
+    val solventAdvice = viewModel.calculateSolventAdjustmentByTargetSolid()
 
-    // SAF 存储访问框架：用于选择本地文件夹保存 PDF
     val savePdfLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri ->
@@ -75,9 +74,9 @@ fun MainScreen(viewModel: CalculatorViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp) // 增加区块间的整体行距
         ) {
             // ================= 1. 配方组分设置 =================
             Card(
@@ -86,8 +85,8 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "1. 配方组分设置",
@@ -102,7 +101,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                             onUpdate = { updated -> viewModel.updateComponent(index, updated) }
                         )
                         if (index < viewModel.components.size - 1) {
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                         }
                     }
                 }
@@ -115,8 +114,8 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "2. 涂布工艺与基材规格",
@@ -125,118 +124,98 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CompactTextField(
                             value = viewModel.coatingDryWeightText,
                             onValueChange = { viewModel.coatingDryWeightText = it },
-                            label = { Text("目标干涂重 (g/m²)", fontSize = 12.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            label = "目标干涂重 (g/m²)",
+                            modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
+                        CompactTextField(
                             value = viewModel.coatingLayersText,
                             onValueChange = { viewModel.coatingLayersText = it },
-                            label = { Text("涂布层数", fontSize = 12.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            label = "涂布层数",
+                            keyboardType = KeyboardType.Number,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CompactTextField(
                             value = viewModel.filmLengthText,
                             onValueChange = { viewModel.filmLengthText = it },
-                            label = { Text("薄膜长度 (m)", fontSize = 12.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            label = "薄膜长度 (m)",
+                            modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
+                        CompactTextField(
                             value = viewModel.filmWidthText,
                             onValueChange = { viewModel.filmWidthText = it },
-                            label = { Text("薄膜幅宽 (m)", fontSize = 12.sp) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            label = "薄膜幅宽 (m)",
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
             }
 
-            // ================= 3. 配胶反算工具 =================
+            // ================= 3. 配胶与浓度反算助手 =================
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "配胶反算助手",
+                        text = "配胶与浓度反算助手",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color(0xFF8D6E63)
                     )
 
                     // 1.1 实验配胶：按主剂添加量
-                    OutlinedTextField(
+                    CompactTextField(
                         value = viewModel.expMainAgentText,
                         onValueChange = { viewModel.expMainAgentText = it },
-                        label = { Text("实验配胶：输入主剂添加量 (g)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        label = "实验配胶：输入主剂添加量 (kg/g)",
+                        modifier = Modifier.fillMaxWidth()
                     )
                     if (expMixingResults.isNotEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.White, RoundedCornerShape(6.dp))
-                                .padding(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            expMixingResults.forEach { (name, amount) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(text = name, fontSize = 13.sp)
-                                    Text(text = "$amount g", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                }
-                            }
-                        }
+                        ResultDisplayBox(expMixingResults)
                     }
 
                     // 1.2 配胶计算：按工作液目标总量
-                    OutlinedTextField(
+                    CompactTextField(
                         value = viewModel.targetTotalMassText,
                         onValueChange = { viewModel.targetTotalMassText = it },
-                        label = { Text("配胶计算：输入工作液目标总量 (g)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        label = "配胶计算：输入工作液目标总量 (kg/g)",
+                        modifier = Modifier.fillMaxWidth()
                     )
                     if (targetMixingResults.isNotEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color.White, RoundedCornerShape(6.dp))
-                                .padding(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ResultDisplayBox(targetMixingResults)
+                    }
+
+                    // 1.3 新增：工作液固含量反算溶剂配比
+                    CompactTextField(
+                        value = viewModel.targetSolidContentText,
+                        onValueChange = { viewModel.targetSolidContentText = it },
+                        label = "反算溶剂：输入目标工作液固含量 (%)",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (solventAdvice.isNotBlank()) {
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            targetMixingResults.forEach { (name, amount) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(text = name, fontSize = 13.sp)
-                                    Text(text = "$amount g", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                }
-                            }
+                            Text(
+                                text = solventAdvice,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFD32F2F),
+                                modifier = Modifier.padding(10.dp)
+                            )
                         }
                     }
                 }
@@ -250,7 +229,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         text = "3. 计算结果与成本汇总",
@@ -268,8 +247,8 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     Text(
-                        text = "各组分明细汇总（湿重保留1位小数，成本保留2位小数）：",
-                        fontSize = 13.sp,
+                        text = "各组分明细汇总（小数保留仅为显示值，后台计算精确度为6位）：",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF1976D2)
                     )
@@ -316,7 +295,6 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 按钮 1：保存到本地（SAF 系统保存面板）
                 OutlinedButton(
                     onClick = {
                         savePdfLauncher.launch("CoatingCalculator_Report.pdf")
@@ -327,7 +305,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Share, // 使用 Share 代替 Download 避免图标缺失报错
+                        imageVector = Icons.Default.Share,
                         contentDescription = "导出到本地",
                         modifier = Modifier.size(18.dp)
                     )
@@ -335,7 +313,6 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     Text("导出到本地", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
 
-                // 按钮 2：直接调用系统分享面板
                 Button(
                     onClick = {
                         PdfExportAndShareHelper.generateAndSharePdf(context, viewModel)
@@ -356,6 +333,50 @@ fun MainScreen(viewModel: CalculatorViewModel) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * 封装一个视觉更加紧凑、高度更小的输入框组件
+ */
+@Composable
+private fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Decimal
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, fontSize = 11.sp) },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        modifier = modifier,
+        singleLine = true,
+        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp) // 减小内部填充高度
+    )
+}
+
+@Composable
+private fun ResultDisplayBox(results: List<Pair<String, String>>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(6.dp))
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        results.forEach { (name, amount) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = name, fontSize = 13.sp)
+                Text(text = "$amount kg/g", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            }
         }
     }
 }
@@ -394,51 +415,49 @@ private fun ComponentInputRow(
         ) {
             Checkbox(
                 checked = comp.enabled,
-                onCheckedChange = { onUpdate(comp.copy(enabled = it)) }
+                onCheckedChange = { onUpdate(comp.copy(enabled = it)) },
+                modifier = Modifier.size(24.dp)
             )
             OutlinedTextField(
                 value = comp.name,
                 onValueChange = { onUpdate(comp.copy(name = it)) },
-                label = { Text("组分#${comp.slotIndex}名称", fontSize = 12.sp) },
+                label = { Text("组分#${comp.slotIndex}名称", fontSize = 11.sp) },
                 enabled = comp.enabled,
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
                     checked = comp.isAdjustableSolvent,
                     onCheckedChange = { onUpdate(comp.copy(isAdjustableSolvent = it)) },
-                    enabled = comp.enabled
+                    enabled = comp.enabled,
+                    modifier = Modifier.size(24.dp)
                 )
-                Text("可调溶剂", fontSize = 12.sp)
+                Text("可调溶剂", fontSize = 11.sp)
             }
         }
 
         if (comp.enabled) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(
+                CompactTextField(
                     value = comp.ratioText,
                     onValueChange = { onUpdate(comp.copy(ratioText = it)) },
-                    label = { Text("配比", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
+                    label = "配比",
+                    modifier = Modifier.weight(1f)
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = comp.solidText,
                     onValueChange = { onUpdate(comp.copy(solidText = it)) },
-                    label = { Text("固含(%)", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
+                    label = "固含(%)",
+                    modifier = Modifier.weight(1f)
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = comp.unitPriceText,
                     onValueChange = { onUpdate(comp.copy(unitPriceText = it)) },
-                    label = { Text("单价(元)", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
+                    label = "单价(元)",
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
