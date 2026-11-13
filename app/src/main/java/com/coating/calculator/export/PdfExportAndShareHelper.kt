@@ -6,23 +6,28 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
-import android.net.Uri
 import androidx.core.content.FileProvider
 import com.coating.calculator.ui.CalculatorViewModel
-import com.coating.calculator.ui.i18n.LocalizationManager
 import java.io.File
 import java.io.FileOutputStream
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object PdfExportAndShareHelper {
 
     /**
-     * 生成 PDF 文件并保存在安全的 shared 缓存目录下
+     * 生成 PDF 文件并保存在安全的 shared 缓存目录下（带时间戳）
      */
     private fun generatePdfFile(context: Context, viewModel: CalculatorViewModel): File {
         val projectResult = viewModel.getProjectCostResult()
         val components = viewModel.components
+
+        // 获取当前格式化时间戳
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val timestampStr = dateFormat.format(Date())
 
         val pdfDocument = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
@@ -33,6 +38,12 @@ object PdfExportAndShareHelper {
             color = Color.BLACK
             textSize = 18f
             isFakeBoldText = true
+            isAntiAlias = true
+        }
+
+        val subTitlePaint = Paint().apply {
+            color = Color.GRAY
+            textSize = 10f
             isAntiAlias = true
         }
 
@@ -70,7 +81,10 @@ object PdfExportAndShareHelper {
         var currentY = 40f
         val margin = 40f
 
-        canvas.drawText("薄膜涂布配方与加工计算单", margin, currentY, titlePaint)
+        // 标题与生成时间戳
+        canvas.drawText("CoatCalc 薄膜涂布配方与成本计算单", margin, currentY, titlePaint)
+        currentY += 16f
+        canvas.drawText("生成时间：$timestampStr", margin, currentY, subTitlePaint)
         currentY += 24f
 
         canvas.drawText("一、基础配方参数", margin, currentY, sectionPaint)
@@ -101,7 +115,7 @@ object PdfExportAndShareHelper {
         val summaryRows = listOf(
             listOf("目标干涂布量", "${viewModel.coatingDryWeightText.ifBlank { "--" }} g/m²", "工作液浓度", projectResult.workingSolutionSolid),
             listOf("薄膜规格 (长×宽)", "${viewModel.filmLengthText.ifBlank { "--" }}m × ${viewModel.filmWidthText.ifBlank { "--" }}m", "${viewModel.coatingLayersText.ifBlank { "--" }}层", ""),
-            listOf("每平米总湿重", "${projectResult.totalWetWeightPerSqm} g/m²", "每平米总成本", "${projectResult.totalCostPerSqm} 元"),
+            listOf("每平米总湿重", "${projectResult.totalWetWeightPerSqm} g/m²", "每平米总成本", "${projectResult.totalCostPerSqm} 元/m²"),
             listOf("加工总面积", "${projectResult.processingAreaSqm} m²", "整卷总成本", "${projectResult.totalRollCost} 元")
         )
         val colWidthsSummary = floatArrayOf(120f, 141.5f, 120f, 141.5f)
@@ -112,12 +126,12 @@ object PdfExportAndShareHelper {
 
         pdfDocument.finishPage(page)
 
-        // 保存在 cacheDir/shared/ 目录下，完美匹配 file_paths.xml
+        // 保存在 cacheDir/shared/ 目录下
         val sharedDir = File(context.cacheDir, "shared")
         if (!sharedDir.exists()) {
             sharedDir.mkdirs()
         }
-        val file = File(sharedDir, "CoatingCalculator_Report.pdf")
+        val file = File(sharedDir, "CoatCalc_Report.pdf")
         pdfDocument.writeTo(FileOutputStream(file))
         pdfDocument.close()
 
@@ -133,7 +147,7 @@ object PdfExportAndShareHelper {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            val chooser = Intent.createChooser(intent, "分享计算报告 PDF")
+            val chooser = Intent.createChooser(intent, "分享 CoatCalc 计算报告 PDF")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
         } catch (e: Exception) {
@@ -141,9 +155,6 @@ object PdfExportAndShareHelper {
         }
     }
 
-    /**
-     * 写入到用户指定的本地目录（通过 SAF 文件保存对话框）
-     */
     fun writePdfToOutputStream(context: Context, viewModel: CalculatorViewModel, outputStream: FileOutputStream) {
         try {
             val file = generatePdfFile(context, viewModel)
