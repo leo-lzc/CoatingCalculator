@@ -32,11 +32,17 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
+    # 👉 新增步骤：将 APK 重命名并放入 dist 文件夹（${{ github.ref_name }} 会自动获取你的标签名，如 v1.0.0）
+    - name: Rename APK
+      run: |
+        mkdir -p dist
+        cp app/build/outputs/apk/debug/app-debug.apk dist/CoatCalc-${{ github.ref_name }}.apk
+
     - name: Upload APK to Release
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v')
       with:
-        files: app/build/outputs/apk/debug/app-debug.apk
+        files: dist/CoatCalc-${{ github.ref_name }}.apk
         name: "App Release ${{ github.ref_name }}"
         body: "自动编译发布的薄膜涂布计算器安装包。"
         draft: false
