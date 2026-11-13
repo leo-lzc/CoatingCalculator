@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import androidx.core.content.FileProvider
 import com.coating.calculator.ui.CalculatorViewModel
 import com.coating.calculator.ui.i18n.LocalizationManager
@@ -16,8 +17,10 @@ import java.math.RoundingMode
 
 object PdfExportAndShareHelper {
 
-    fun generateAndSharePdf(context: Context, viewModel: CalculatorViewModel) {
-        val strings = LocalizationManager.getStrings(viewModel.currentLanguage)
+    /**
+     * 生成 PDF 文件并保存在安全的 shared 缓存目录下
+     */
+    private fun generatePdfFile(context: Context, viewModel: CalculatorViewModel): File {
         val projectResult = viewModel.getProjectCostResult()
         val components = viewModel.components
 
@@ -96,10 +99,10 @@ object PdfExportAndShareHelper {
         currentY += 8f
 
         val summaryRows = listOf(
-            listOf("目标干涂布量", "${viewModel.coatingDryWeightText.ifBlank { "--" }} g/m²", "工作液浓度", formatSolidPercent(projectResult.workingSolutionSolid)),
+            listOf("目标干涂布量", "${viewModel.coatingDryWeightText.ifBlank { "--" }} g/m²", "工作液浓度", projectResult.workingSolutionSolid),
             listOf("薄膜规格 (长×宽)", "${viewModel.filmLengthText.ifBlank { "--" }}m × ${viewModel.filmWidthText.ifBlank { "--" }}m", "${viewModel.coatingLayersText.ifBlank { "--" }}层", ""),
-            listOf("每平米总湿重", "${formatWeightOrArea(projectResult.totalWetWeightPerSqm)} g/m²", "每平米总成本", "${formatCostInteger(projectResult.totalCostPerSqm)} 元"),
-            listOf("计算状态", projectResult.status.name, "整卷总成本", "${formatCostInteger(projectResult.totalRollCost)} 元")
+            listOf("每平米总湿重", "${projectResult.totalWetWeightPerSqm} g/m²", "每平米总成本", "${projectResult.totalCostPerSqm} 元"),
+            listOf("加工总面积", "${projectResult.processingAreaSqm} m²", "整卷总成本", "${projectResult.totalRollCost} 元")
         )
         val colWidthsSummary = floatArrayOf(120f, 141.5f, 120f, 141.5f)
 
@@ -109,11 +112,49 @@ object PdfExportAndShareHelper {
 
         pdfDocument.finishPage(page)
 
-        val file = File(context.cacheDir, "CoatingCalculator_Report.pdf")
+        // 保存在 cacheDir/shared/ 目录下，完美匹配 file_paths.xml
+        val sharedDir = File(context.cacheDir, "shared")
+        if (!sharedDir.exists()) {
+            sharedDir.mkdirs()
+        }
+        val file = File(sharedDir, "CoatingCalculator_Report.pdf")
         pdfDocument.writeTo(FileOutputStream(file))
         pdfDocument.close()
 
-        sharePdf(context, file)
+        return file
+    }
+
+    fun generateAndSharePdf(context: Context, viewModel: CalculatorViewModel) {
+        try {
+            val file = generatePdfFile(context, viewModel)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(intent, "分享计算报告 PDF")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 写入到用户指定的本地目录（通过 SAF 文件保存对话框）
+     */
+    fun writePdfToOutputStream(context: Context, viewModel: CalculatorViewModel, outputStream: FileOutputStream) {
+        try {
+            val file = generatePdfFile(context, viewModel)
+            file.inputStream().use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun drawTableRow(
@@ -146,18 +187,6 @@ object PdfExportAndShareHelper {
         return startY + maxHeight
     }
 
-    private fun sharePdf(context: Context, file: File) {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        val chooser = Intent.createChooser(intent, "分享计算报告 PDF")
-        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(chooser)
-    }
-
     private fun formatRatio(value: BigDecimal?): String {
         return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
     }
@@ -169,10 +198,6 @@ object PdfExportAndShareHelper {
     }
 
     private fun formatCostInteger(value: BigDecimal?): String {
-        return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
-    }
-
-    private fun formatWeightOrArea(value: BigDecimal?): String {
         return value?.setScale(2, RoundingMode.HALF_UP)?.stripTrailingZeros()?.toPlainString() ?: "0"
     }
 }

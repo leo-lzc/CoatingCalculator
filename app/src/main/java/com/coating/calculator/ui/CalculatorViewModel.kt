@@ -36,6 +36,15 @@ data class FormattedComponentDetail(
     val totalCostText: String        // 元 保留2位小数
 )
 
+// 格式化后的项目汇总数据结构（重量1位，成本2位）
+data class FormattedProjectResult(
+    val workingSolutionSolid: String,
+    val totalWetWeightPerSqm: String,
+    val totalCostPerSqm: String,
+    val processingAreaSqm: String,
+    val totalRollCost: String
+)
+
 class CalculatorViewModel : ViewModel() {
     var currentLanguage by mutableStateOf(AppLanguage.ZH_CN)
         private set
@@ -69,7 +78,7 @@ class CalculatorViewModel : ViewModel() {
         }
     }
 
-    fun getProjectCostResult(): ProjectCostResult {
+    private fun getRawProjectResult(): ProjectCostResult {
         val inputs = components.filter { it.enabled }.map { it.toEngineInput() }
         val d = coatingDryWeightText.toBigDecimalOrNull() ?: BigDecimal.ZERO
         val l = filmLengthText.toBigDecimalOrNull() ?: BigDecimal.ZERO
@@ -79,12 +88,33 @@ class CalculatorViewModel : ViewModel() {
     }
 
     /**
+     * 获取格式化后的项目汇总数据（固含量保留百分比整数，湿重/面积保留1位小数，成本保留2位小数）
+     */
+    fun getProjectCostResult(): FormattedProjectResult {
+        val raw = getRawProjectResult()
+        
+        val solidPercent = raw.workingSolutionSolid.multiply(BigDecimal("100")).setScale(0, RoundingMode.HALF_UP)
+        val wetWeightFormatted = raw.totalWetWeightPerSqm.setScale(1, RoundingMode.HALF_UP).toPlainString()
+        val costPerSqmFormatted = raw.totalCostPerSqm.setScale(2, RoundingMode.HALF_UP).toPlainString()
+        val areaFormatted = raw.processingAreaSqm.setScale(1, RoundingMode.HALF_UP).toPlainString()
+        val totalRollCostFormatted = raw.totalRollCost.setScale(2, RoundingMode.HALF_UP).toPlainString()
+
+        return FormattedProjectResult(
+            workingSolutionSolid = "$solidPercent%",
+            totalWetWeightPerSqm = wetWeightFormatted,
+            totalCostPerSqm = costPerSqmFormatted,
+            processingAreaSqm = areaFormatted,
+            totalRollCost = totalRollCostFormatted
+        )
+    }
+
+    /**
      * 获取各组分明细数据（每平米湿重/总重量保留1位小数，每平米成本/总成本保留2位小数）
      */
     fun getFormattedComponentDetails(): List<FormattedComponentDetail> {
-        val result = getProjectCostResult()
+        val raw = getRawProjectResult()
         val inputs = components.filter { it.enabled }
-        if (inputs.isEmpty() || result.workingSolutionSolid.compareTo(BigDecimal.ZERO) == 0) {
+        if (inputs.isEmpty() || raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) == 0) {
             return emptyList()
         }
 
@@ -95,8 +125,8 @@ class CalculatorViewModel : ViewModel() {
         val area = l.multiply(w).multiply(n) // 总加工面积 m²
 
         val totalRatio = inputs.sumOf { it.toEngineInput().ratio }
-        val totalWetSqm = if (result.workingSolutionSolid.compareTo(BigDecimal.ZERO) > 0) {
-            d.divide(result.workingSolutionSolid, 6, RoundingMode.HALF_UP)
+        val totalWetSqm = if (raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) > 0) {
+            d.divide(raw.workingSolutionSolid, 6, RoundingMode.HALF_UP)
         } else {
             BigDecimal.ZERO
         }
