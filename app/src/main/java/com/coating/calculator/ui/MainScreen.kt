@@ -124,7 +124,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    Row(horizontalSpacing = 10.dp, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = viewModel.coatingDryWeightText,
                             onValueChange = { viewModel.coatingDryWeightText = it },
