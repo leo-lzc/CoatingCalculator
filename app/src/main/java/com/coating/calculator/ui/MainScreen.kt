@@ -184,7 +184,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     OutlinedTextField(
                         value = viewModel.expMainAgentText,
                         onValueChange = { viewModel.expMainAgentText = it },
-                        label = { Text("实验配胶：输入主剂添加量 (kg/g)", fontSize = 11.sp) },
+                        label = { Text("实验配胶：输入主剂添加量 (g)", fontSize = 11.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -196,7 +196,7 @@ fun MainScreen(viewModel: CalculatorViewModel) {
                     OutlinedTextField(
                         value = viewModel.targetTotalMassText,
                         onValueChange = { viewModel.targetTotalMassText = it },
-                        label = { Text("配胶计算：输入工作液目标总量 (kg/g)", fontSize = 11.sp) },
+                        label = { Text("配胶计算：输入工作液目标总量 (g)", fontSize = 11.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -362,7 +362,7 @@ private fun ResultDisplayBox(results: List<Pair<String, String>>) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = name, fontSize = 13.sp)
-                Text(text = "$amount kg/g", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(text = "$amount g", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
         }
     }

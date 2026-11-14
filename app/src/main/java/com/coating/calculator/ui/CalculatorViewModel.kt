@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import com.coating.calculator.engine.*
 import com.coating.calculator.ui.i18n.AppLanguage
+import com.coating.calculator.ui.utils.DisplayFormatter
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -20,7 +21,8 @@ data class ComponentUiState(
         slotIndex = slotIndex,
         name = name,
         ratio = ratioText.toBigDecimalOrNull() ?: BigDecimal.ZERO,
-        solidContent = (solidText.toBigDecimalOrNull() ?: BigDecimal.ZERO).divide(BigDecimal(100)),
+        solidContent = (solidText.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+            .divide(BigDecimal("100"), 6, RoundingMode.HALF_UP),
         unitPrice = unitPriceText.toBigDecimalOrNull(),
         isAdjustableSolvent = isAdjustableSolvent
     )
@@ -87,15 +89,15 @@ class CalculatorViewModel : ViewModel() {
 
     fun getProjectCostResult(): FormattedProjectResult {
         val raw = getRawProjectResult()
-        
-        val solidPercent = raw.workingSolutionSolid.multiply(BigDecimal("100")).setScale(0, RoundingMode.HALF_UP)
+
+        val solidPercentFormatted = DisplayFormatter.formatSolidPercent(raw.workingSolutionSolid)
         val wetWeightFormatted = raw.totalWetWeightPerSqm.setScale(1, RoundingMode.HALF_UP).toPlainString()
         val costPerSqmFormatted = raw.totalCostPerSqm.setScale(2, RoundingMode.HALF_UP).toPlainString()
         val areaFormatted = raw.processingAreaSqm.setScale(1, RoundingMode.HALF_UP).toPlainString()
         val totalRollCostFormatted = raw.totalRollCost.setScale(2, RoundingMode.HALF_UP).toPlainString()
 
         return FormattedProjectResult(
-            workingSolutionSolid = "$solidPercent%",
+            workingSolutionSolid = solidPercentFormatted,
             totalWetWeightPerSqm = wetWeightFormatted,
             totalCostPerSqm = costPerSqmFormatted,
             processingAreaSqm = areaFormatted,
@@ -105,48 +107,19 @@ class CalculatorViewModel : ViewModel() {
 
     fun getFormattedComponentDetails(): List<FormattedComponentDetail> {
         val raw = getRawProjectResult()
-        val inputs = components.filter { it.enabled }
-        if (inputs.isEmpty() || raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) == 0) {
+        if (raw.componentDetails.isEmpty() || raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) == 0) {
             return emptyList()
         }
 
-        val d = coatingDryWeightText.toBigDecimalOrNull() ?: BigDecimal.ZERO
-        val l = filmLengthText.toBigDecimalOrNull() ?: BigDecimal.ZERO
-        val w = filmWidthText.toBigDecimalOrNull() ?: BigDecimal.ZERO
-        val n = coatingLayersText.toBigDecimalOrNull() ?: BigDecimal.ONE
-        val area = l.multiply(w).multiply(n)
-
-        val totalRatio = inputs.sumOf { it.toEngineInput().ratio }
-        val totalWetSqm = if (raw.workingSolutionSolid.compareTo(BigDecimal.ZERO) > 0) {
-            d.divide(raw.workingSolutionSolid, 6, RoundingMode.HALF_UP)
-        } else {
-            BigDecimal.ZERO
-        }
-
-        return inputs.map { comp ->
-            val engineInput = comp.toEngineInput()
-            val ratioFraction = if (totalRatio.compareTo(BigDecimal.ZERO) > 0) {
-                engineInput.ratio.divide(totalRatio, 6, RoundingMode.HALF_UP)
-            } else {
-                BigDecimal.ZERO
-            }
-
-            val wetSqm = totalWetSqm.multiply(ratioFraction).setScale(1, RoundingMode.HALF_UP)
-            val unitPrice = engineInput.unitPrice ?: BigDecimal.ZERO
-            val costSqm = wetSqm.divide(BigDecimal("1000"), 6, RoundingMode.HALF_UP)
-                .multiply(unitPrice)
-                .setScale(2, RoundingMode.HALF_UP)
-
-            // kg 单位严格保留 2 位小数
-            val totalWeightKg = wetSqm.multiply(area)
-                .divide(BigDecimal("1000"), 6, RoundingMode.HALF_UP)
-                .setScale(2, RoundingMode.HALF_UP)
-
-            val totalCost = totalWeightKg.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP)
+        return raw.componentDetails.map { detail ->
+            val wetSqm = detail.wetWeightPerSqm.setScale(1, RoundingMode.HALF_UP)
+            val costSqm = detail.costPerSqm.setScale(2, RoundingMode.HALF_UP)
+            val totalWeightKg = detail.rollConsumptionKg.setScale(2, RoundingMode.HALF_UP)
+            val totalCost = detail.rollCost.setScale(2, RoundingMode.HALF_UP)
 
             FormattedComponentDetail(
-                slotIndex = comp.slotIndex,
-                name = comp.name.ifBlank { "组分${comp.slotIndex}" },
+                slotIndex = detail.slotIndex,
+                name = detail.name,
                 wetWeightPerSqmText = wetSqm.toPlainString(),
                 costPerSqmText = costSqm.toPlainString(),
                 totalWeightKgText = totalWeightKg.toPlainString(),
